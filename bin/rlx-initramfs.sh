@@ -1,5 +1,22 @@
 #!/bin/bash
 #
+# rlx-initramfs
+# Copyright (C) 2020 rlxos
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
 # Based on https://wiki.gentoo.org/wiki/Custom_Initramfs/Examples
 #
 
@@ -121,6 +138,21 @@ function InstallModule {
     done
 }
 
+function PrintHelp() {
+    echo "
+    rlx-initramfs 0.1.0 : initial ramdisk managment tool
+
+    Usage: rlx-initramfs [options]
+
+    Options:
+        --kernel=<version>              To use <version> of kernel for modules
+        --out=<aout>                    save initramfs to <aout>
+        --init=<path/to/init>           pack initramfs with custom init
+        --binary='list of bins'         pack specified binaries in initramfs
+        --modules='list of modules'     pack specified modules in initramfs
+"
+}
+
 function SetupStructure {
     mkdir -pv "${INITRAMFS_DIR}/"{dev,lib,run,sys,proc,usr,bin}
     mkdir -pv "${INITRAMFS_DIR}"/lib/{firmware,modules/$KERNEL_VERSION}
@@ -166,6 +198,11 @@ function Main {
 
             --modules=*)
                 KERNEL_MODULES="${KERNEL_MODULES} ${i#*=}"
+                ;;
+
+            --help|-h)
+                PrintHelp
+                exit 0
                 ;;
 
         esac
@@ -235,7 +272,7 @@ ${KERNEL_MODULES} ${i#*=}
 
     cp /lib/modules/${KERNEL_VERSION}/modules.{builtin,order}   \
         "${INITRAMFS_DIR}/lib/modules/${KERNEL_VERSION}/"
-    
+
     depmod -b "${INITRAMFS_DIR}" "$KERNEL_VERSION"
 
     Copy /boot/uk.bkeymap /keymap
@@ -256,7 +293,7 @@ ${KERNEL_MODULES} ${i#*=}
 
     chmod 400 $OUT_FILE
 
-    rm -r ${INITRAMFS_DIR} 
+    rm -r ${INITRAMFS_DIR}
 }
 
 Main $@
