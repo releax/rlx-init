@@ -29,23 +29,23 @@
 <!-- PROJECT LOGO -->
 <br />
 <p align="center">
-  <!--a href="https://github.com/rlxos/rlx-initramfs.git">
+  <!--a href="https://github.com/rlxos/rlx-init.git">
     <img src="images/logo.png" alt="Logo" width="80" height="80">
   </a-->
 
-  <h3 align="center">rlx-initramfs</h3>
+  <h3 align="center">rlx-init</h3>
 
   <p align="center">
     A minimal and efficient initial ramdisk managment tool for rlxos
     <br />
-    <a href="https://github.com/rlxos/rlx-initramfs"><strong>Explore the docs »</strong></a>
+    <a href="https://github.com/rlxos/rlx-init"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/rlxos/rlx-initramfs">View Demo</a>
+    <a href="https://github.com/rlxos/rlx-init">View Demo</a>
     ·
-    <a href="https://github.com/rlxos/rlx-initramfs/issues">Report Bug</a>
+    <a href="https://github.com/rlxos/rlx-init/issues">Report Bug</a>
     ·
-    <a href="https://github.com/rlxos/rlx-initramfs/issues">Request Feature</a>
+    <a href="https://github.com/rlxos/rlx-init/issues">Request Feature</a>
   </p>
 </p>
 
@@ -70,7 +70,7 @@
 
 <!-- GETTING STARTED -->
 ## Getting Started
-initramfs is a root filesystem that load at an early boot stage. rlx-initramfs provide early userspace to do tasks such as 
+initramfs is a root filesystem that load at an early boot stage. rlx-init provide early userspace to do tasks such as 
 * Loading essential modules
 * Mounting root filesystem
 * Decrypting root partition
@@ -78,7 +78,7 @@ initramfs is a root filesystem that load at an early boot stage. rlx-initramfs p
 
 ### Prerequisites
 
-rlx-initramfs is pre installed in [rlxos](https://releax.in/) but can be installed in any unix/linux system with following libraries and utilities avaliable:
+rlx-init is pre installed in [rlxos](https://releax.in/) but can be installed in any unix/linux system with following libraries and utilities avaliable:
 * bash
 * cat dd killall ls mkdir mknode mount umount sed sleep ln rm uname readlink basename
 * modprobe kmod insmod lsmod blkid switch_root
@@ -107,12 +107,12 @@ General setup  --->
 
 <!-- USAGE EXAMPLES -->
 ## Usage
-rlx-initramfs use common and standard command line arguments for performing operations, like
+rlx-init use common and standard command line arguments for performing operations, like
 
 ```bash
-    rlx-initramfs 0.1.0 : initial ramdisk managment tool
+    rlx-init 0.1.0 : initial ramdisk managment tool
 
-    Usage: rlx-initramfs [options]
+    Usage: rlx-init [options]
 
     Options:
         --kernel=<version>              To use <version> of kernel for modules
@@ -122,14 +122,14 @@ rlx-initramfs use common and standard command line arguments for performing oper
         --modules='list of modules'     pack specified modules in initramfs
 ```
 
-_For more examples, please refer to the [Documentation](https://github.com/rlxos/rlx-initramfs/docs/rlx-initramfs.html)_
+_For more examples, please refer to the [Documentation](https://github.com/rlxos/rlx-init/docs/rlx-init.html)_
 
 
 
 <!-- ROADMAP -->
 ## Roadmap
 
-See the [open issues](https://github.com/rlxos/rlx-initramfs/issues) for a list of proposed features (and known issues).
+See the [open issues](https://github.com/rlxos/rlx-init/issues) for a list of proposed features (and known issues).
 
 
 
@@ -160,7 +160,7 @@ Manjeet Singh - [@releaxos](https://twitter.com/releaxos) - itsmanjeet@releax.in
 [Join](https://discord.gg/TXTxDTYcdg) our discord server for any query
 
 
-Project Link: [https://github.com/rlxos/rlx-initramfs](https://github.com/rlxos/rlx-initramfs)
+Project Link: [https://github.com/rlxos/rlx-init](https://github.com/rlxos/rlx-init)
 
 
 
@@ -174,15 +174,15 @@ Project Link: [https://github.com/rlxos/rlx-initramfs](https://github.com/rlxos/
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/rlxos/rlx-initramfs.svg?style=flat-square
-[contributors-url]: https://github.com/rlxos/rlx-initramfs/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/rlxos/rlx-initramfs.svg?style=flat-square
-[forks-url]: https://github.com/rlxos/rlx-initramfs/network/members
-[stars-shield]: https://img.shields.io/github/stars/rlxos/rlx-initramfs.svg?style=flat-square
-[stars-url]: https://github.com/rlxos/rlx-initramfs/stargazers
-[issues-shield]: https://img.shields.io/github/issues/rlxos/rlx-initramfs.svg?style=flat-square
-[issues-url]: https://github.com/rlxos/rlx-initramfs/issues
-[license-shield]: https://img.shields.io/github/license/rlxos/rlx-initramfs.svg?style=flat-square
-[license-url]: https://github.com/rlxos/rlx-initramfs/blob/master/license
+[contributors-shield]: https://img.shields.io/github/contributors/rlxos/rlx-init.svg?style=flat-square
+[contributors-url]: https://github.com/rlxos/rlx-init/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/rlxos/rlx-init.svg?style=flat-square
+[forks-url]: https://github.com/rlxos/rlx-init/network/members
+[stars-shield]: https://img.shields.io/github/stars/rlxos/rlx-init.svg?style=flat-square
+[stars-url]: https://github.com/rlxos/rlx-init/stargazers
+[issues-shield]: https://img.shields.io/github/issues/rlxos/rlx-init.svg?style=flat-square
+[issues-url]: https://github.com/rlxos/rlx-init/issues
+[license-shield]: https://img.shields.io/github/license/rlxos/rlx-init.svg?style=flat-square
+[license-url]: https://github.com/rlxos/rlx-init/blob/master/license
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=flat-square&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/releax

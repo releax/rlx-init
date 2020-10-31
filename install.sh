@@ -7,8 +7,7 @@ PREFIX=${PREFIX:-"/usr/"}
 BINDIR=${BINDIR:-"$PREFIX/sbin/"}
 DATADIR=${DATADIR:-"$PREFIX/share/"}
 
-install -vDm755 bin/rlx-initramfs.sh ${DESTDIR}${BINDIR}/rlx-initramfs
-install -vDm755 bin/rlx-lsinitramfs.sh ${DESTDIR}${BINDIR}/rlx-lsinitramfs
-install -vDm755 bin/lddtree.sh ${DESTDIR}${BINDIR}/lddtree
+install -vDm755 bin/rlx-init.sh ${DESTDIR}${BINDIR}/rlx-init
+install -vDm755 bin/rlx-lsinit.sh ${DESTDIR}${BINDIR}/rlx-lsinit
 
-install -vDm644 src/init.in.sh ${DESTDIR}$DATADIR/rlx-initramfs/init.in
+install -vDm644 src/init.sh ${DESTDIR}$DATADIR/rlx-init/init.in

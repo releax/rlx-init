@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# rlx-lsinitramfs
+# rlx-lsinit
 # Copyright (C) 2020 rlxos
 
 # This program is free software: you can redistribute it and/or modify
@@ -18,11 +18,11 @@
 #
 #
 
-INITRAMFS_FILE=${1:-"/boot/initramfs.img"}
+INITRD=${1:-"/boot/initrd"}
 
-[[ -e "$INITRAMFS_FILE" ]] || {
-    echo "[Error]: $INITRAMFS_FILE not exist"
+[[ -e "${INITRD}" ]] || {
+    echo "[Error]: ${INITRD} not exist"
     exit 1
 }
 
-gzip -dc "$INITRAMFS_FILE" | bsdcpio -it
+gzip -dc "${INITRD}" | bsdcpio -it
