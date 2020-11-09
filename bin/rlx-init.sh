@@ -28,7 +28,7 @@ BINARIES="sh bash cat cp dd killall ls mkdir mknod mount \
 	 umount sed sleep ln rm uname readlink basename \
 	 modprobe kmod insmod lsmod blkid \
 	 blkid dmesg findfs tail head \
-	 switch_root mdadm mdmon losetup touch install"
+	 switch_root losetup touch install"
 
 INITRD_DIR=$(mktemp -d /tmp/rlx-init.XXXXXXXXXX)
 INIT_IN=${INIT_IN:-'/usr/share/rlx-init/init.in'}
@@ -144,8 +144,8 @@ parse_args() {
 # prepare required dirs, files and nodes
 prepare_structure() {
 	mkdir -p -- "${INITRD_DIR}/"{bin,dev,etc,lib,mnt/root,proc,sbin,sys,run}
-	copy /dev/console /dev/
-	copy /dev/null /dev/
+	#copy /dev/console /dev/
+	#copy /dev/null /dev/
 
 	for i in $BINARIES ; do
 		[[ -x /sbin/$i ]] && loc=/sbin/$i || loc=/bin/$i
@@ -161,8 +161,8 @@ prepare_structure() {
 # install udev daemon for dynamic module loading
 # required when booting from non native system (iso, live booting)
 install_udev() {
-	install_binary udevd
-	install_binary udevadm
+	install_binary /sbin/udevd
+	install_binary /sbin/udevadm
 
 	for i in ata_id scsi_id cdrom_id  mtd_probe v4l_id ; do
 		install_binary /lib/udev/${i}
@@ -198,7 +198,7 @@ compress_initrd() {
 
 	install_libraries
 
-	(cd "${INITRD_DIR}"; find . | LANG=C bsdcpio -o -H newc --quiet | gzip -9) > "${AOUT}"
+	(cd "${INITRD_DIR}"; find . | LANG=C cpio -o -H newc --quiet | gzip -9) > "${AOUT}"
 
 	chmod 400 "${AOUT}"
 }
@@ -207,7 +207,8 @@ compress_initrd() {
 function main {
 
 	parse_args $@
-
+	
+	echo "generating initrd $KERNEL"
 	prepare_structure
 
 	# prepare initrd from iso
