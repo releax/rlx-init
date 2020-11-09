@@ -22,7 +22,6 @@
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
 [![MIT License][license-shield]][license-url]
-[![LinkedIn][linkedin-shield]][linkedin-url]
 
 
 
@@ -37,11 +36,11 @@
 
   <p align="center">
     A minimal and efficient initial ramdisk managment tool for rlxos
-    <br />
+    <!-- <br />
     <a href="https://github.com/rlxos/rlx-init"><strong>Explore the docs »</strong></a>
-    <br />
-    <br />
-    <a href="https://github.com/rlxos/rlx-init">View Demo</a>
+    <br /> -->
+    <!-- <br />
+    <a href="https://github.com/rlxos/rlx-init">View Demo</a> -->
     ·
     <a href="https://github.com/rlxos/rlx-init/issues">Report Bug</a>
     ·
@@ -54,8 +53,6 @@
 <!-- TABLE OF CONTENTS -->
 ## Table of Contents
 
-* [About the Project](#about-the-project)
-  * [Built With](#built-with)
 * [Getting Started](#getting-started)
   * [Prerequisites](#prerequisites)
   * [Installation](#installation)
@@ -72,6 +69,8 @@
 ## Getting Started
 initramfs is a root filesystem that load at an early boot stage. rlx-init provide early userspace to do tasks such as 
 * Loading essential modules
+* Check if boot from iso
+* Prepare root overlay system for live booting
 * Mounting root filesystem
 * Decrypting root partition
 * Providing rescue shell
@@ -80,12 +79,9 @@ initramfs is a root filesystem that load at an early boot stage. rlx-init provid
 
 rlx-init is pre installed in [rlxos](https://releax.in/) but can be installed in any unix/linux system with following libraries and utilities avaliable:
 * bash
-* cat dd killall ls mkdir mknode mount umount sed sleep ln rm uname readlink basename
-* modprobe kmod insmod lsmod blkid switch_root
-* mdadm mdmom losetup touch install
-* lvm cryptsetup findfs
-* lvchange lvrename lvextend lvcreate lvscan
-* udevd udevadm
+* coreutils
+* utillinux
+* udev (need patch for systemd-udev)
 
 
 #### Kernel configuration
@@ -118,11 +114,10 @@ rlx-init use common and standard command line arguments for performing operation
         --kernel=<version>              To use <version> of kernel for modules
         --out=<aout>                    save initramfs to <aout>
         --init=<path/to/init>           pack initramfs with custom init
-        --binary='list of bins'         pack specified binaries in initramfs
-        --modules='list of modules'     pack specified modules in initramfs
+        --iso                           pack require modules to boot from iso
 ```
 
-_For more examples, please refer to the [Documentation](https://github.com/rlxos/rlx-init/docs/rlx-init.html)_
+<!-- _For more examples, please refer to the [Documentation](https://github.com/rlxos/rlx-init/docs/rlx-init.html)_ -->
 
 
 
@@ -155,13 +150,9 @@ Distributed under the GPL3 License. See `license` for more information.
 
 <!-- CONTACT -->
 ## Contact
-Manjeet Singh - [@releaxos](https://twitter.com/releaxos) - itsmanjeet@releax.in
+Manjeet Singh - itsmanjeet@releax.in
 
 [Join](https://discord.gg/TXTxDTYcdg) our discord server for any query
-
-
-Project Link: [https://github.com/rlxos/rlx-init](https://github.com/rlxos/rlx-init)
-
 
 
 <!-- ACKNOWLEDGEMENTS -->
