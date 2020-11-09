@@ -54,14 +54,12 @@ mount_filesystem() {
     mount -t proc     none /proc || rescue_shell "failed to mount /proc"
     mount -t sysfs    none /sys  || rescue_shell "failed to mount /sys"
     mount -t devtmpfs none /dev  || rescue_shell "failed to mount /dev"
+    mount -t tmpfs    none /run  || rescue_shell "failed to mount /run"
 }
 
 # load_modules
 # load required modules if specified in cmdline or if booting from iso
 load_modules() {
-    if [[ -z "$squa" ]] || [[ -z "$modules" ]] ; then
-        return
-    fi
 
     # load modules required for booting from squashfs image (cdrom)
     [[ -n "$squa" ]] && modules="$modules cdrom sr_mod isofs overlay"
@@ -88,23 +86,28 @@ search_roots() {
 # prepare_cdrom
 # prepare roots from cdrom while booting live system or cdrom
 prepare_cdrom() {
-    mkdir -p /iso
+    mkdir -p /run/{initrd,iso}
+    # mount iso device (sr0) -> /run/iso
+    mount -o ro "${root}" /run/iso || rescue_shell "failed to mount iso ${YELLOW}(squa enabled)${RESET}"
 
-    # mount iso device (sr0) -> /iso
-    mount -o ro "${root}" /iso || rescue_shell "failed to mount iso ${YELLOW}(squa enabled)${RESET}"
+    # mount squa image -> /run/initrd/overlay/squa
+    [[ -d /run/initrd/overlay/squa ]] || mkdir -p /run/initrd/overlay/squa
+    [[ -e "/run/iso/${squa}" ]] || rescue_shell "'${squa}' not exist in iso"
 
-    # mount squa image -> /mnt/root
-    [[ -d /mnt/root ]] || mkdir -p /mnt/root
-    [[ -e "/iso/${squa}" ]] || rescue_shell "'${squa}' not exist in iso"
+    mount -t squashfs "/run/iso/${squa}" /run/initrd/overlay/squa || rescue_shell "failed to mount squa ${squa} to /run/initrd/overlay/squa"
 
-    mount -t squashfs "/iso/${squa}" /mnt/root || rescue_shell "failed to mount squa ${squa} to /mnt/root"
+    mkdir -p /run/initrd/overlay/{upper,work}
+    
+    rootpoint=/mnt/root
+    mkdir -p $rootpoint
+    mount -t overlay -o lowerdir=/run/initrd/overlay/squa,upperdir=/run/initrd/overlay/upper,workdir=/run/initrd/overlay/work none $rootpoint
 }
 
 # mount_root
 # mount root device to /mnt/root
 mount_root() {
-    [[ -d /mnt/root ]] || mkdir -p /mnt/root
-    mount -o "${ro}" "${root}" /mnt/root || rescue_shell "failed to mount roots ${root} to /mnt/root"
+    [[ -d "${rootpoint}" ]] || mkdir -p "${rootpoint}"
+    mount -o "${ro}" "${root}" "${rootpoint}" || rescue_shell "failed to mount roots ${root} to /mnt/root"
 }
 
 
@@ -159,6 +162,7 @@ function main() {
     ro='ro'
     init='/sbin/init'
     squa=
+    rootpoint='/mnt/root'
 
     echo -e "${BOLD}welcome to ${GREEN}rlxos${RESET}"
 
@@ -182,9 +186,7 @@ function main() {
     debug "checking resume"
     check_resume
 
-    # cleanup
-    umount /proc /sys
-    exec switch_root /mnt/root "${init}" || rescue_shell "failed to switch roots"
+    exec switch_root "${rootpoint}" "${init}" || rescue_shell "failed to switch roots"
 }
 
 
