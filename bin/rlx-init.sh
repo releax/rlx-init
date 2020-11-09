@@ -24,162 +24,202 @@ ROOT=
 CRYPT_ROOT=
 RESUME=
 
+BINARIES="sh bash cat cp dd killall ls mkdir mknod mount \
+	 umount sed sleep ln rm uname readlink basename \
+	 modprobe kmod insmod lsmod blkid \
+	 blkid dmesg findfs tail head \
+	 switch_root mdadm mdmon losetup touch install"
+
 INITRD_DIR=$(mktemp -d /tmp/rlx-init.XXXXXXXXXX)
 INIT_IN=${INIT_IN:-'/usr/share/rlx-init/init.in'}
+KERNEL=${KERNEL:-$(uname -r)}
+unsorted=$(mktemp /tmp/unsorted.XXXXXXXXXX)
+AOUT="/boot/initrd"
 
 export LC_ALL=C
 
 debug() {
     [[ -z $DEBUG ]] && return
-
-    echo -ne "\033[1;32m"
-    echo $@ >&2
-    echo -ne "\033[00m"
+    echo -e "\033[1;32m$@\033[00m"
 }
 
 warn() {
-    echo -ne "\033[1;33m"
-    echo $@ >&2
-    echo -ne "\033[00m"
+    echo -e "\033[1;33m$@\033[00m"
 }
 
 error() {
-    echo -ne "\033[1;31m"
-    echo $@ >&2
-    echo -ne "\033[00m"
-    clean
+    echo -e "\033[1;31m$@\033[00m"
+    cleanup
     exit 1
 }
 
-clean() {
+cleanup() {
     rm -r "${INITRD_DIR}"
 }
 
+# copy src dst mode
+#    | src
+#    | src dst
+# copy src file to dst destination with mode
 copy() {
     debug "copy $@"
 
 	src=$1
 	dst=$2
+
+	if [[ "${src:0:1}" != "/" ]] ; then
+		src="/$src"
+	fi
+
 	if [ -z "${dst}" ]; then
-		# $dst is not given, use the base directory of $src
-		dst="$(dirname -- "$1")/"
+		dst=${src/\//}
 	fi
 
-	# check if the file will be copied into the initrd root
-	# realpath will remove trailing / that are needed later on...
-	add_slash=false
-	if [ "${dst%/}" != "${dst}" ]; then
-		# $dst has a trailing /
-		add_slash=true
-	fi
-	dst="$(realpath --canonicalize-missing -- ${INITRD_DIR}/${dst})"
-	${add_slash} && dst="${dst}/"
-
-	# check if $src exists
-	if [ ! -e "${src}" ]; then
-		warn "Cannot copy '${src}'. File not found. Skipping."
-		return
-	fi
-	# check if the destination is really inside ${INITRD_DIR}
-	if [ "${dst}" = "${dst##${INITRD_DIR}}" ]; then
-        warn "${dst}"
-		warn "Invalid destination $2 for $1. Skipping."
+	if [[ ! -e "${src}" ]] ; then
+		error "file not found: $src"
 		return
 	fi
 
-	# check if the destination is a file or a directory and 
-	# if it already exists
-	if [ -e "${dst}" ]; then
-		# $dst exists, but that's ok if it is a directory
-		if [ -d "${dst}" ]; then
-			# $dst is an existing directory
-			dst_dir="${dst}"
-			if [ -e "${dst_dir}/$(basename -- "${src}")" ]; then
-				# the file exists in the destination directory, silently skip it
-				debug "Target file exists, skiping."
-				return
-			fi
-		else
-			# $dst exists, but it's not a directory, silently skip it
-			debug "Target file exists, skiping."
-			return
-		fi
-	else
-		if [ "${dst%/}" != "${dst}" ]; then
-			# $dst ends in a /, so it must be a directory
-			dst_dir="$dst"
-		else
-			# probably a file
-			dst_dir="$(dirname -- "${dst}")"
-		fi
-		# make sure that the destination directory exists
-		mkdir -p -- "${dst_dir}"
-	fi
+	mode=${3:-$(stat -c %a "${src}")}
+	[[ -z "$mode" ]] && {
+		warn "failed to get file mode: $src"
+		return
+	}
 
-	# copy the file
-	debug "cp -a ${src} ${dst}"
-	cp -a "${src}" "${dst}" || error "Error: Could not copy ${src}"
-	if [ -h "${src}" ]; then
-		# $src is a symlink, follow it
-		link_target="$(readlink -- "${src}")"
-		if [ "${link_target#/}" = "${link_target}" ]; then
-			# relative link, make it absolute
-			link_target="$(dirname -- "${src}")/${link_target}"
-		fi
-		# get the canonical path, i.e. without any ../ and such stuff
-		link_target="$(realpath --no-symlink -- "${link_target}")"
-		debug "Following symlink to $link_target"
-		copy "${link_target}"
-	elif [ -f "${src}" ]; then
-		mime_type="$(file --brief --mime-type -- "${src}")"
-		if [ "${mime_type}" = "application/x-sharedlib" ] || \
-		   [ "${mime_type}" = "application/x-executable" ] || \
-		   [ "${mime_type}" = "application/x-pie-executable" ]; then
-			# $src may be dynamically linked, copy the dependencies
-			# lddtree -l prints $src as the first line, skip it
-			lddtree -l "${src}" | tail -n +2 | while read file; do
-				debug "Recursing to dependency $file"
-				copy "${file}"
-			done
-		fi
-	fi
+	install -Dm${mode} $src "${INITRD_DIR}/$dst"
+
 }
 
 
-# if grep -q /boot /proc/mounts ; then
-#     umount_boot=false
-# else
-#     mount /boot || error "Error: failed to mount /boot"
-#     umount_boot=true
-# fi
+# install_binary bin
+# install binary into initrd
+install_binary() {
+	ldd $1 | sed 's/\t//' | cut -d ' ' -f1 >> $unsorted
+	copy $1
+}
 
-mkdir -p -- "${INITRD_DIR}/"{bin,dev,etc,lib,mnt/root,proc,sbin,sys}
-copy /dev/console /dev/
-copy /dev/null /dev/
 
-if [[ ! -e /bin/busybox ]] ; then
-    wget https://www.busybox.net/downloads/binaries/1.31.0-i686-uclibc/busybox
-    chmod 755 busybox
-    copy ./busybox bin/
-    rm busybox
-else
-    copy /bin/busybox bin/
-fi
+# install_libraries
+# install libraries required by binaries installed from $(install_binary)
+install_libraries() {
+	sort $unsorted | uniq | while read library ; do
+		if [[ "$library" == linux-vdso.so.1 ]] ||
+		   [[ "$library" == linux-gate.so.1 ]] ; then
 
-for applet in $(${INITRD_DIR}/bin/busybox --list | grep -Fxv busybox) ; do
-    if [[ -e "/sbin/${applet}" ]] ; then
-        ln -s /bin/busybox "${INITRD_DIR}/sbin/${applet}"
-    else
-        ln -s /bin/busybox "${INITRD_DIR}/bin/${applet}"
-    fi
-done
+		   continue
+		fi
 
-install -vm755 "${INIT_IN}" "${INITRD_DIR}/init"
+		[[ $library =~ "/lib/" ]] || library="/lib/$library"
+		copy $library lib/
+	done
+}
 
-cd "${INITRD_DIR}"
 
-find . -print0 | cpio --null -ov --format=newc | gzip -9 > /boot/initrd
+# parse_cmdline_args $@
+# parse arguments
+parse_args() {
+    for p in $@ ; do
+        case "${p}" in
+            -k=* | --kernel=*)
+				KERNEL=${p#*=}
+				;;
 
-chmod 400 /boot/initrd
+			-i=* | --init=*)
+				INIT_IN=${p#*=}
+				;;
 
-clean
+			-iso)
+				ISO=1
+				;;
+
+			-o=* | --out=*)
+				AOUT=${p#*=}
+				;;
+        esac
+    done
+}
+
+
+# prepare_structure 
+# prepare required dirs, files and nodes
+prepare_structure() {
+	mkdir -p -- "${INITRD_DIR}/"{bin,dev,etc,lib,mnt/root,proc,sbin,sys,run}
+	copy /dev/console /dev/
+	copy /dev/null /dev/
+
+	for i in $BINARIES ; do
+		[[ -x /sbin/$i ]] && loc=/sbin/$i || loc=/bin/$i
+		install_binary $loc
+	done
+
+	# installing init
+	install -m755 "${INIT_IN}" "${INITRD_DIR}/init"
+}
+
+
+# install_udev
+# install udev daemon for dynamic module loading
+# required when booting from non native system (iso, live booting)
+install_udev() {
+	install_binary udevd
+	install_binary udevadm
+
+	for i in ata_id scsi_id cdrom_id  mtd_probe v4l_id ; do
+		install_binary /lib/udev/${i}
+	done
+
+	for i in /lib/udev/rules.d/*.rules ; do
+		copy $i
+	done
+}
+
+
+# install_modules
+# install extra kernel modules
+install_modules() {
+
+	mkdir -p $INITRD_DIR/lib/modules/$KERNEL/
+
+	copy /lib/modules/$KERNEL/kernel/fs/isofs/isofs.ko.xz
+	copy /lib/modules/$KERNEL/kernel/drivers/cdrom/cdrom.ko.xz
+	copy /lib/modules/$KERNEL/kernel/drivers/scsi/sr_mod.ko.xz
+	copy /lib/modules/$KERNEL/kernel/fs/overlayfs/overlay.ko.xz
+
+	for i in /lib/modules/$KERNEL/modules.* ; do
+		copy $i
+	done
+}
+
+# compress_initrd
+# install required libraries
+# compress initrd
+# change mode to 400
+compress_initrd() {
+
+	install_libraries
+
+	(cd "${INITRD_DIR}"; find . | LANG=C bsdcpio -o -H newc --quiet | gzip -9) > "${AOUT}"
+
+	chmod 400 "${AOUT}"
+}
+
+
+function main {
+
+	parse_args $@
+
+	prepare_structure
+
+	# prepare initrd from iso
+	if [[ -n "$ISO" ]] ; then
+		install_udev
+		install_modules
+	fi
+
+	compress_initrd
+
+	cleanup
+}
+
+
+main $@

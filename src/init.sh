@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # init.in
 # Copyright (C) 2020 rlxos
@@ -17,63 +17,175 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+export PATH=/bin:/sbin
 
+RESET='\033[0m'
+BLACK='\033[1;30m'
+RED='\033[1;31m'
+GREEN='\033[1;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[1;34m'
+PURPLE='\033[1;35m'
+CYAN='\033[1;36m'
+WHITE='\033[1;37m'
+BBOLD='\033[1m'
+
+# rescue_shell 'fail message'
+# drop the boot process into rescue mode for debug
 rescue_shell() {
-    printf '\033[1;31m'
-    printf '$1 Dropping to rescue shell'
-    printf '\033[00m\n'
+
+    echo -e "${RED}$1${RESET}\n${YELLOW}Dropping to ${GREEN}resuce${YELLO}shell${RESET}"
+    dmesg | tail -n 5
 
     [[ -f /keymap ]] && loadkmap < /keymap
     exec setsid cttyhack /bin/sh
 }
 
-mount -t proc     none /proc || rescue_shell "mount /proc failed"
-mount -t sysfs    none /sys  || rescue_shell "mount /proc failed"
-mount -t devtmpfs none /dev  || rescue_shell "mount /proc failed"
+# debug 'message'
+# print debug messages if enable
+debug() {
+    [[ -z "$DEBUG" ]] && return
+    echo -e "${GREEN}debug${RESET}:${BBOLD}$@${RESET}"
+}
 
-root=
-resume=
-ro='ro'
-init='/sbin/init'
-squa=
+# mount_filesystem
+# mount pseudo filesystems devtmpfs, sysfs, proc
+mount_filesystem() {
+    mount -t proc     none /proc || rescue_shell "failed to mount /proc"
+    mount -t sysfs    none /sys  || rescue_shell "failed to mount /sys"
+    mount -t devtmpfs none /dev  || rescue_shell "failed to mount /dev"
+}
 
-for p in $(cat /proc/cmdline) ; do
-    case "${p}" in
-        root=*)
-            root="${p#*=}"
-            ;;
+# load_modules
+# load required modules if specified in cmdline or if booting from iso
+load_modules() {
+    if [[ -z "$squa" ]] || [[ -z "$modules" ]] ; then
+        return
+    fi
 
-        squa=*)
-            squa="${p#*=}"
-            ;;
+    # load modules required for booting from squashfs image (cdrom)
+    [[ -n "$squa" ]] && modules="$modules cdrom sr_mod isofs overlay"
 
-        resume=*)
-            resume="${p#*=}"
-            ;;
+    for m in $modules ; do
+        modprobe $m || rescue_shell "failed to load $m module"
+    done
+    
+}
 
-        ro|rw)
-            ro="${p}"
-            ;;
+# search_roots
+# search roots 
+search_roots() {
+    oldroot=${root}
 
-        init=*)
-            init="${p#*=}"
-            ;;
+    root=$(findfs ${root})
+    [[ -z "$root" ]] && rescue_shell "failed to find roots from '${oldroot}'"
 
-    esac
-done
+    # TODO
+    # find root device from every block node /dev/? (check for /usr/etc/rlx-release)
 
-if [[ -z $squa ]] ; then
-    root="$(findfs ${root})"
-    mount -o "${ro}" "${root}" /mnt/root || rescue_shell "mount ${root} failed"
-else
-    mount -o $squa /mnt/root || rescue_shell "mount ${squa} failed"
-fi
+}
 
-if [ -n "${resume}" ] ; then
-    printf '%u:%u\n' $(stat -L -c '0x%t 0x%T' "${resume}") > /sys/power/resume || \
-        rescue_shell "Activating resume failed"
-fi
+# prepare_cdrom
+# prepare roots from cdrom while booting live system or cdrom
+prepare_cdrom() {
+    mkdir -p /iso
 
-umount /proc /sys /dev
+    # mount iso device (sr0) -> /iso
+    mount -o ro "${root}" /iso || rescue_shell "failed to mount iso ${YELLOW}(squa enabled)${RESET}"
 
-exec switch_root /mnt/root "${init}"
+    # mount squa image -> /mnt/root
+    [[ -d /mnt/root ]] || mkdir -p /mnt/root
+    [[ -e "/iso/${squa}" ]] || rescue_shell "'${squa}' not exist in iso"
+
+    mount -t squashfs "/iso/${squa}" /mnt/root || rescue_shell "failed to mount squa ${squa} to /mnt/root"
+}
+
+# mount_root
+# mount root device to /mnt/root
+mount_root() {
+    [[ -d /mnt/root ]] || mkdir -p /mnt/root
+    mount -o "${ro}" "${root}" /mnt/root || rescue_shell "failed to mount roots ${root} to /mnt/root"
+}
+
+
+# check_resume
+# check if resume from hibernation
+check_resume() {
+    if [ -n "${resume}" ] ; then
+        debug "resuming from ${resume}"
+        printf '%u:%u\n' $(stat -L -c '0x%t 0x%T' "${resume}") > /sys/power/resume || \
+            rescue_shell "activating resume failed"
+    fi
+}
+
+# parse_cmdline_args
+# parse linux cmdline args from /proc/cmdline
+parse_cmdline_args() {
+    for p in $(cat /proc/cmdline) ; do
+        case "${p}" in
+            root=*)
+                root="${p#*=}"
+                ;;
+
+            squa=*)
+                squa="${p#*=}"
+                ;;
+
+            resume=*)
+                resume="${p#*=}"
+                ;;
+
+            ro|rw)
+                ro="${p}"
+                ;;
+
+            init=*)
+                init="${p#*=}"
+                ;;
+            
+            debug)
+                DEBUG=1
+                ;;
+        esac
+    done
+}
+
+
+function main() {
+
+    # Default variables
+    root=
+    resume=
+    ro='ro'
+    init='/sbin/init'
+    squa=
+
+    echo -e "${BOLD}welcome to ${GREEN}rlxos${RESET}"
+
+    mount_filesystem
+    parse_cmdline_args
+
+    debug "loading modules"
+    load_modules
+
+    debug "searching roots"
+    search_roots
+
+    if [[ -z "$squa" ]] ; then
+        debug "mounting roots"
+        mount_root
+    else
+        debug "preparing and mounting iso"
+        prepare_cdrom
+    fi
+
+    debug "checking resume"
+    check_resume
+
+    # cleanup
+    umount /proc /sys
+    exec switch_root /mnt/root "${init}" || rescue_shell "failed to switch roots"
+}
+
+
+main
