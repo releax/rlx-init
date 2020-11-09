@@ -55,6 +55,7 @@
 
 * [Getting Started](#getting-started)
   * [Prerequisites](#prerequisites)
+  * [Kernel configuration](#kernel-configuration)
   * [Installation](#installation)
 * [Usage](#usage)
 * [Roadmap](#roadmap)
