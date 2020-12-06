@@ -102,16 +102,26 @@ install_binary() {
 # install_libraries
 # install libraries required by binaries installed from $(install_binary)
 install_libraries() {
+
+	copy /lib/ld-linux-x86-64.so.2
 	sort $unsorted | uniq | while read library ; do
 		if [[ "$library" == linux-vdso.so.1 ]] ||
 		   [[ "$library" == linux-gate.so.1 ]] ; then
 
 		   continue
 		fi
-
-		[[ $library =~ "/lib/" ]] || library="/lib/$library"
-		copy $library lib/
+		
+		for i in " " lib lib64 usr/lib ; do
+			[[ -e "/$i/$library" ]] && {
+				copy "/$i/$library"
+				break
+			}
+		done
+		#[[ $library =~ "/lib/" ]] || library="/lib/$library"
+		#copy $library lib/
 	done
+
+	ln -sv lib $INITRD_DIR/lib64
 }
 
 
@@ -148,8 +158,13 @@ prepare_structure() {
 	#copy /dev/null /dev/
 
 	for i in $BINARIES ; do
-		[[ -x /sbin/$i ]] && loc=/sbin/$i || loc=/bin/$i
-		install_binary $loc
+		for x in bin sbin usr/bin usr/sbin ; do
+			[[ -x /$x/$i ]] && {
+				loc="/$x/$i"
+				install_binary $loc
+				break
+			}
+		done
 	done
 
 	# installing init

@@ -25,4 +25,4 @@ INITRD=${1:-"/boot/initrd"}
     exit 1
 }
 
-gzip -dc "${INITRD}" | bsdcpio -it
+gzip -dc "${INITRD}" | cpio -it
